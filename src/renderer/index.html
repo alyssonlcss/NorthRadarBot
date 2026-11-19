@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NorthRadarBot — Central Autônoma de Alertas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="app-branding">
+        <span class="app-logo">📡</span>
+        <div>
+          <h1 class="app-title">NorthRadarBot</h1>
+          <span class="app-subtitle">Serviço Autônomo de Notificações WhatsApp — 24/7</span>
+        </div>
+      </div>
+
+      <div class="header-badges">
+        <div class="status-pill" id="robotStatusPill">
+          <span class="status-dot on" id="robotStatusDot"></span>
+          <span id="robotStatusText">Robô Ativo</span>
+        </div>
+        <div class="status-pill" id="waStatusPill">
+          <span class="status-dot" id="waStatusDot"></span>
+          <span id="waStatusText">WhatsApp: Verificando...</span>
+        </div>
+        <button type="button" class="btn-action" id="btnRunNow" title="Executar varredura das regras imediatamente">⚡ Varredura Agora</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="app-nav">
+      <button type="button" class="nav-tab active" data-tab="monitoring">📊 Monitoramento & Histórico</button>
+      <button type="button" class="nav-tab" data-tab="whatsapp">💬 WhatsApp Web & QR Code</button>
+      <button type="button" class="nav-tab" data-tab="routing">⚙️ Regras & Roteamento por Base</button>
+      <button type="button" class="nav-tab" data-tab="logs">📜 Logs de Execução</button>
+    </nav>
+
+    <!-- Main Content Views -->
+    <main class="app-content">
+      <!-- ABA 1: MONITORAMENTO -->
+      <section class="tab-view active" id="view-monitoring">
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-icon">🚨</span>
+            <div class="metric-data">
+              <span class="metric-val" id="metricAlertsToday">0</span>
+              <span class="metric-lbl">Alertas Disparados Hoje</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-icon">⏱️</span>
+            <div class="metric-data">
+              <span class="metric-val" id="metricCycleMins">3 min</span>
+              <span class="metric-lbl">Intervalo de Varredura</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <span class="metric-icon">🌐</span>
+            <div class="metric-data">
+              <span class="metric-val" id="metricPolos">ATLANTICO, DNORT</span>
+              <span class="metric-lbl">Polos Monitorados</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card" style="margin-top: 16px;">
+          <div class="section-card-header">
+            <h3>Últimos Alertas Operacionais Disparados</h3>
+            <span class="badge-count" id="historyCount">0 alertas</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Horário</th>
+                  <th>Tipo / Regra</th>
+                  <th>Incidência</th>
+                  <th>Equipe</th>
+                  <th>Base</th>
+                  <th>Grupo WhatsApp</th>
+                  <th>Menções</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <tr><td colspan="7" class="empty-state">Nenhum alerta disparado na sessão atual.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 2: WHATSAPP WEB & QR CODE -->
+      <section class="tab-view" id="view-whatsapp">
+        <div class="whatsapp-layout">
+          <div class="qr-panel">
+            <div class="qr-box" id="qrContainer">
+              <div class="qr-placeholder" id="qrPlaceholder">
+                <span>⏳ Carregando sessão do WhatsApp Web...</span>
+              </div>
+              <img id="qrImage" class="qr-img" style="display:none;" alt="QR Code WhatsApp" />
+              <div class="qr-success" id="qrSuccess" style="display:none;">
+                <span style="font-size: 48px;">✅</span>
+                <h3>WhatsApp Conectado com Sucesso!</h3>
+                <p>O robô está autenticado e pronto para despachar mensagens nos grupos configurados.</p>
+              </div>
+            </div>
+            <div class="qr-actions">
+              <button type="button" class="btn-primary" id="btnReconnectWa">🔄 Reconectar / Trocar WhatsApp</button>
+            </div>
+          </div>
+
+          <div class="wa-info-panel">
+            <div class="info-card">
+              <h3>Orientações de Conexão</h3>
+              <ol>
+                <li>Abra o WhatsApp no seu smartphone corporativo.</li>
+                <li>Acesse <strong>Aparelhos Conectados</strong> &gt; <strong>Conectar um aparelho</strong>.</li>
+                <li>Aponte a câmera para o QR Code ao lado.</li>
+                <li>A sessão fica gravada localmente no computador, sobrevivendo a reinicializações.</li>
+              </ol>
+            </div>
+            <div class="info-card" style="margin-top: 12px;">
+              <h3>Envio Automático</h3>
+              <label class="toggle-control">
+                <input type="checkbox" id="chkAutoSend" checked />
+                <span>Despachar mensagens no WhatsApp automaticamente ao detectar regras críticas</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 3: REGRAS & ROTEAMENTO POR BASE -->
+      <section class="tab-view" id="view-routing">
+        <!-- SELEÇÃO DE POLOS MONITORADOS -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <div>
+              <h3>Polos Operacionais Monitorados</h3>
+              <span class="sub-hint">Selecione quais polos o robô deve consultar durante as varreduras de ocorrências</span>
+            </div>
+            <button type="button" class="btn-primary" id="btnSavePolos">💾 Salvar Polos</button>
+          </div>
+          <div class="polos-selection-grid">
+            <label class="toggle-control polo-checkbox-card">
+              <input type="checkbox" id="chkPoloAtlantico" value="ATLANTICO" />
+              <div class="polo-info">
+                <strong>🌊 ATLÂNTICO</strong>
+                <span class="sub-hint">Polo Metropolitano / Atlântico</span>
+              </div>
+            </label>
+            <label class="toggle-control polo-checkbox-card">
+              <input type="checkbox" id="chkPoloDecen" value="DECEN" />
+              <div class="polo-info">
+                <strong>🏙️ DECEN</strong>
+                <span class="sub-hint">Polo Centro-Norte</span>
+              </div>
+            </label>
+            <label class="toggle-control polo-checkbox-card">
+              <input type="checkbox" id="chkPoloDnort" value="DNORT" />
+              <div class="polo-info">
+                <strong>🌲 DNORT</strong>
+                <span class="sub-hint">Polo Norte</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="section-card" style="margin-top: 14px;">
+          <div class="section-card-header">
+            <div>
+              <h3>Grupo Padrão do WhatsApp (Fallback)</h3>
+              <span class="sub-hint">Utilizado quando um alerta não tiver grupo específico configurado</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <input type="text" id="inputDefaultGroup" class="form-input" placeholder="Ex: Alertas Operacionais COI" />
+            <button type="button" class="btn-primary" id="btnSaveGroup">Salvar Grupo Padrão</button>
+          </div>
+        </div>
+
+        <!-- CONFIGURAÇÃO DE DESTINO POR REGRA OPERACIONAL (REGRAS 1 A 6) -->
+        <div class="section-card" style="margin-top: 14px;">
+          <div class="section-card-header">
+            <div>
+              <h3>Destinos e Contatos por Regra de Alerta (Regras 1 a 6)</h3>
+              <span class="sub-hint">Configure o grupo ou contato/telefone de destino e as menções para cada gatilho operacional</span>
+            </div>
+            <button type="button" class="btn-primary" id="btnSaveRuleGroups">💾 Salvar Destinos das Regras</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 270px;">Regra Operacional</th>
+                  <th>Grupo ou Contato no WhatsApp</th>
+                  <th>Quem Marcar (@supervisor / telefone)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <strong>⏱️ Regra 1: Duração &ge; 18h</strong>
+                    <div class="sub-hint">Ocorrências abertas há 18 horas ou mais</div>
+                  </td>
+                  <td>
+                    <input type="text" id="ruleGroup_duracao18h" class="form-input" placeholder="Grupo ou Contato (vazio = padrão)" />
+                  </td>
+                  <td>
+                    <input type="text" id="ruleMention_duracao18h" class="form-input" placeholder="@Supervisor, @Gerente, tel" />
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>⚡ Regra 2: CHI &ge; 1.000</strong>
+                    <div class="sub-hint">Interrupções com alto impacto em CHI</div>
+                  </td>
+                  <td>
+                    <input type="text" id="ruleGroup_chi1000" class="form-input" placeholder="Grupo ou Contato (vazio = padrão)" />
+                  </td>
+                  <td>
+                    <input type="text" id="ruleMention_chi1000" class="form-input" placeholder="@Supervisor, @Gerente, tel" />
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>👥 Regra 3: Clientes &ge; 100</strong>
+                    <div class="sub-hint">Desligamentos com 100 ou mais clientes</div>
+                  </td>
+                  <td>
+                    <input type="text" id="ruleGroup_clientes100" class="form-input" placeholder="Grupo ou Contato (vazio = padrão)" />
+                  </td>
+                  <td>
+                    <input type="text" id="ruleMention_clientes100" class="form-input" placeholder="@Supervisor, @Gerente, tel" />
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>📅 Regra 4: Previsão Expirada</strong>
+                    <div class="sub-hint">Serviços programados com horário estourado</div>
+                  </td>
+                  <td>
+                    <input type="text" id="ruleGroup_previsaoExpirada" class="form-input" placeholder="Grupo ou Contato (vazio = padrão)" />
+                  </td>
+                  <td>
+                    <input type="text" id="ruleMention_previsaoExpirada" class="form-input" placeholder="@Supervisor, @Gerente, tel" />
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>🆘 Regra 5: SLA de 2º Recurso</strong>
+                    <div class="sub-hint">Apoio pendente de envio (&ge; 4h ou &gt; 5h)</div>
+                  </td>
+                  <td>
+                    <input type="text" id="ruleGroup_sla2Recurso" class="form-input" placeholder="Grupo ou Contato (vazio = padrão)" />
+                  </td>
+                  <td>
+                    <input type="text" id="ruleMention_sla2Recurso" class="form-input" placeholder="@Supervisor, @Gerente, tel" />
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong>⏳ Regra 6: Inércia de Despacho</strong>
+                    <div class="sub-hint">Ocorrência crítica há mais de 2h sem equipe</div>
+                  </td>
+                  <td>
+                    <input type="text" id="ruleGroup_faltaDespacho" class="form-input" placeholder="Grupo ou Contato (vazio = padrão)" />
+                  </td>
+                  <td>
+                    <input type="text" id="ruleMention_faltaDespacho" class="form-input" placeholder="@Supervisor, @Gerente, tel" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-card" style="margin-top: 14px;">
+          <div class="section-card-header">
+            <h3>Adicionar Roteamento de Estagnação (Regra 7)</h3>
+            <span class="sub-hint">Define o grupo e supervisor por Base e Vínculo (Própria ou Parceira)</span>
+          </div>
+
+          <div class="team-form-grid">
+            <div>
+              <label>Base Operacional</label>
+              <select id="selRouteBase" class="form-input">
+                <option value="TODAS">Todas as Bases</option>
+                <optgroup label="🌊 Polo Atlântico">
+                  <option value="Acaraú">Acaraú</option>
+                  <option value="Itapajé">Itapajé</option>
+                  <option value="Itapipoca">Itapipoca</option>
+                  <option value="Trairi">Trairi</option>
+                </optgroup>
+                <optgroup label="🏙️ Polo Centro-Norte (DECEN)">
+                  <option value="Canindé">Canindé</option>
+                  <option value="Crateús">Crateús</option>
+                  <option value="Nova Russas">Nova Russas</option>
+                  <option value="Quixadá">Quixadá</option>
+                </optgroup>
+                <optgroup label="🌲 Polo Norte (DNORT)">
+                  <option value="Camocim">Camocim</option>
+                  <option value="Inhuçu">Inhuçu</option>
+                  <option value="Sobral">Sobral</option>
+                  <option value="Tianguá">Tianguá</option>
+                </optgroup>
+              </select>
+            </div>
+            <div>
+              <label>Vínculo</label>
+              <select id="selRouteType" class="form-input">
+                <option value="PROPRIA">Equipes Próprias</option>
+                <option value="PARCEIRA">Equipes Parceiras</option>
+                <option value="TODAS">Todas as Equipes</option>
+              </select>
+            </div>
+            <div id="divRouteEmpresa" style="display:none;">
+              <label>Empresa Parceira</label>
+              <input type="text" id="inputRouteEmpresa" class="form-input" placeholder="Ex: BeQ, Applus" />
+            </div>
+            <div>
+              <label>Grupo no WhatsApp (opcional)</label>
+              <input type="text" id="inputRouteGroup" class="form-input" placeholder="Ex: Acaraú Próprias" />
+            </div>
+            <div>
+              <label>Quem Marcar (@supervisor, telefone)</label>
+              <input type="text" id="inputRouteMentions" class="form-input" placeholder="@Supervisor 1, tel" />
+            </div>
+            <div>
+              <label>&nbsp;</label>
+              <button type="button" class="btn-primary" id="btnAddRoute" style="width:100%;">+ Adicionar Regra</button>
+            </div>
+          </div>
+
+          <div class="routes-list-wrap" style="margin-top: 14px;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Base</th>
+                  <th>Vínculo / Empresa</th>
+                  <th>Grupo Destino</th>
+                  <th>Quem Marcar</th>
+                  <th style="width: 50px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="routesTableBody">
+                <tr><td colspan="5" class="empty-state">Nenhuma regra cadastrada. O alerta usará o grupo padrão.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 4: LOGS EM TEMPO REAL -->
+      <section class="tab-view" id="view-logs">
+        <div class="section-card-header" style="margin-bottom: 12px;">
+          <div>
+            <h3>Logs de Execução em Tempo Real</h3>
+            <span class="sub-hint">Histórico completo de varredura, consultas e disparos</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn-action" id="btnCopyLogs" title="Copiar todos os registros para a área de transferência">📋 Copiar Todos os Logs</button>
+            <button type="button" class="btn-action" id="btnClearLogs" title="Limpar visualização do console">🗑️ Limpar Tela</button>
+          </div>
+        </div>
+        <div class="console-box" id="consoleBox">
+          <div class="console-empty">Aguardando primeiros registros de log...</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+

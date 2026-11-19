@@ -1,0 +1,30 @@
+{
+  "name": "northradar-bot",
+  "version": "1.0.0",
+  "description": "Aplicativo Desktop Autônomo de Alertas Operacionais e Notificações WhatsApp",
+  "main": "src/main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "keywords": [
+    "northradar",
+    "whatsapp",
+    "operview",
+    "spotfire",
+    "automation",
+    "electron"
+  ],
+  "author": "NorthRadar Team",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "puppeteer-core": "^22.12.1"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}
+
